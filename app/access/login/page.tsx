@@ -1,14 +1,21 @@
 'use client'
 
 import { Alert, Box, Button, Card, Collapse, FormControl, Link, TextField, Typography } from "@mui/material";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function Login() {
+  
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [helperTexts, setHelperTexts] = useState({ email: "", password: "" });
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState("Erro");
+
+  useEffect(() => {
+    sessionStorage.removeItem("jwtToken")
+  })
 
   const validateEmail = (email: string) => {
     if (!email) return "Insira um email";
@@ -46,6 +53,13 @@ export default function Login() {
       }
 
       const data = await response.json();
+
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("jwtToken", data.access_token);
+      }
+
+      router.push('/')
+      
       console.log("Login successful:", data);
       // Redirect or save auth token here
     } catch (e) {
