@@ -59,9 +59,6 @@ export default function Login() {
       }
 
       router.push('/')
-      
-      console.log("Login successful:", data);
-      // Redirect or save auth token here
     } catch (e) {
       console.log(e);
       setAlertOpen(true);
