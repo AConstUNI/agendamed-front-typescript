@@ -28,13 +28,13 @@ export default function AppBarLayout({
       const token = sessionStorage.getItem("jwtToken");
 
       if (!token) {
-        router.replace("/access/login");
+        router.replace("/");
         return;
       }
 
       const user = await getUserSession(token);
       if (!user || (user.role !== role)) {
-        router.replace("/access/login"); // redirect if no access
+        router.replace("/"); // redirect if no access
         return;
       }
 
