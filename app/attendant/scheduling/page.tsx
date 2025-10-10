@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Container,
   Typography,
@@ -23,78 +23,130 @@ import {
 interface Agendamento {
   id: number;
   pacienteId: number;
+  medicoId: number;
   data: string;
+  hora: string;
   sala: string;
-  inicio: string;
-  fim: string;
+  telefone: string;
 }
 
-const pacientes = [
-  { id: 1, nome: "Ana Silva" },
-  { id: 2, nome: "Carlos Pereira" },
-  { id: 3, nome: "Mariana Costa" },
-  { id: 4, nome: "João Oliveira" },
-];
+interface User {
+  id: number;
+  name: string;
+  role: string;
+}
 
 export default function AgendamentoPage() {
   const [pacienteId, setPacienteId] = useState<number | "">("");
+  const [medicoId, setMedicoId] = useState<number | "">("");
   const [data, setData] = useState("");
+  const [hora, setHora] = useState("");
   const [sala, setSala] = useState("");
-  const [inicio, setInicio] = useState("");
-  const [fim, setFim] = useState("");
+  const [telefone, setTelefone] = useState("");
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [editando, setEditando] = useState<number | null>(null);
+  const [pacientes, setPacientes] = useState<User[]>([]);
+  const [medicos, setMedicos] = useState<User[]>([]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // 🔹 Buscar usuários da API
+  const fetchUsers = async () => {
+    if (!process.env.NEXT_PUBLIC_API_LINK) return;
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_LINK}/users/all`);
+      if (!response.ok) return;
+
+      const data = await response.json();
+
+      // Separa pacientes e médicos
+      const filteredPacientes = data.filter(
+        (user: User) => user.role?.toLowerCase() === "user"
+      );
+      const filteredMedicos = data.filter(
+        (user: User) =>
+          user.role?.toLowerCase() === "doctor" || user.role?.toLowerCase() === "medico"
+      );
+
+      setPacientes(filteredPacientes);
+      setMedicos(filteredMedicos);
+    } catch (e) {
+      console.error("Erro ao buscar usuários:", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!pacienteId) {
-      alert("Selecione um paciente antes de confirmar.");
+    if (!pacienteId || !medicoId) {
+      alert("Selecione paciente e médico antes de confirmar.");
       return;
     }
 
-    if (editando !== null) {
-      setAgendamentos(
-        agendamentos.map((a) =>
-          a.id === editando ? { ...a, pacienteId, data, sala, inicio, fim } : a
-        )
-      );
-      setEditando(null);
-      alert("✅ Agendamento atualizado!");
-    } else {
-      const novo: Agendamento = {
-        id: Date.now(),
-        pacienteId: Number(pacienteId),
-        data,
-        sala,
-        inicio,
-        fim,
-      };
+    if (!telefone.trim()) {
+      alert("Informe o telefone de contato do paciente.");
+      return;
+    }
 
-      // Verifica conflito
-      const conflito = agendamentos.find(
-        (a) =>
-          a.sala === sala &&
-          a.data === data &&
-          ((inicio >= a.inicio && inicio < a.fim) ||
-            (fim > a.inicio && fim <= a.fim))
-      );
+    if (!hora) {
+      alert("Informe o horário do atendimento.");
+      return;
+    }
 
-      if (conflito) {
-        alert("⚠️ Conflito de horário! Sala já ocupada.");
+    if (!data) {
+      alert("Informe a data do atendimento.");
+      return;
+    }
+
+    if (!sala.trim()) {
+      alert("Informe a sala do atendimento.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_LINK}/users/agenda`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          pacienteId: Number(pacienteId),
+          medicoId: Number(medicoId),
+          data,
+          hora,
+          sala,
+          telefone,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        alert(errorData.message || "Erro ao criar agendamento!");
         return;
       }
 
-      setAgendamentos([...agendamentos, novo]);
-      alert("✅ Agendamento criado com sucesso!");
-    }
+      const novoAgendamento = await response.json();
 
-    setPacienteId("");
-    setData("");
-    setSala("");
-    setInicio("");
-    setFim("");
+      setAgendamentos([...agendamentos, novoAgendamento]);
+      alert("✅ Agendamento criado com sucesso!");
+
+      // Resetar campos
+      setPacienteId("");
+      setMedicoId("");
+      setData("");
+      setHora("");
+      setSala("");
+      setTelefone("");
+      setEditando(null);
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao criar agendamento. Tente novamente.");
+    }
   };
+
 
   const handleCancelar = (id: number) => {
     setAgendamentos(agendamentos.filter((a) => a.id !== id));
@@ -102,15 +154,18 @@ export default function AgendamentoPage() {
 
   const handleEditar = (a: Agendamento) => {
     setPacienteId(a.pacienteId);
+    setMedicoId(a.medicoId);
     setData(a.data);
+    setHora(a.hora);
     setSala(a.sala);
-    setInicio(a.inicio);
-    setFim(a.fim);
+    setTelefone(a.telefone);
     setEditando(a.id);
   };
 
-  const getPacienteNome = (id: number) =>
-    pacientes.find((p) => p.id === id)?.nome || "Desconhecido";
+  const getUserNome = (id: number, tipo: "paciente" | "medico") => {
+    const lista = tipo === "paciente" ? pacientes : medicos;
+    return lista.find((u) => u.id === id)?.name || "Desconhecido";
+  };
 
   return (
     <Container sx={{ mt: 4 }}>
@@ -118,12 +173,13 @@ export default function AgendamentoPage() {
         Agendamento de Consultas
       </Typography>
 
-      {/* Formulário */}
+      {/* 🔹 Formulário */}
       <Box
         component="form"
         onSubmit={handleSubmit}
         sx={{ display: "grid", gap: 2, mb: 4 }}
       >
+        {/* Paciente */}
         <FormControl fullWidth>
           <InputLabel>Paciente</InputLabel>
           <Select
@@ -137,43 +193,70 @@ export default function AgendamentoPage() {
             </MenuItem>
             {pacientes.map((p) => (
               <MenuItem key={p.id} value={p.id}>
-                {p.nome}
+                {p.name}
               </MenuItem>
             ))}
           </Select>
         </FormControl>
 
+        {/* Telefone */}
         <TextField
-          label="Data"
+          label="Telefone de Contato"
+          placeholder="(11) 99999-9999"
+          value={telefone}
+          onChange={(e) => setTelefone(e.target.value)}
+          required
+        />
+
+        {/* Médico */}
+        <FormControl fullWidth>
+          <InputLabel>Médico</InputLabel>
+          <Select
+            value={medicoId}
+            onChange={(e) => setMedicoId(e.target.value as number)}
+            label="Médico"
+            required
+          >
+            <MenuItem value="">
+              <em>Selecione um médico</em>
+            </MenuItem>
+            {medicos.map((m) => (
+              <MenuItem key={m.id} value={m.id}>
+                {m.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        {/* Data */}
+        <TextField
+          label="Data da Consulta"
           type="date"
           InputLabelProps={{ shrink: true }}
           value={data}
           onChange={(e) => setData(e.target.value)}
           required
         />
+
+        {/* Hora */}
+        <TextField
+          label="Horário do Atendimento"
+          type="time"
+          InputLabelProps={{ shrink: true }}
+          value={hora}
+          onChange={(e) => setHora(e.target.value)}
+          required
+        />
+
+        {/* Sala */}
         <TextField
           label="Sala"
           value={sala}
           onChange={(e) => setSala(e.target.value)}
           required
         />
-        <TextField
-          label="Início"
-          type="time"
-          InputLabelProps={{ shrink: true }}
-          value={inicio}
-          onChange={(e) => setInicio(e.target.value)}
-          required
-        />
-        <TextField
-          label="Fim"
-          type="time"
-          InputLabelProps={{ shrink: true }}
-          value={fim}
-          onChange={(e) => setFim(e.target.value)}
-          required
-        />
 
+        {/* Botão */}
         <Button
           type="submit"
           variant="contained"
@@ -183,6 +266,7 @@ export default function AgendamentoPage() {
         </Button>
       </Box>
 
+      {/* 🔹 Lista de Agendamentos */}
       <Typography variant="h5" gutterBottom>
         Agendamentos
       </Typography>
@@ -194,12 +278,13 @@ export default function AgendamentoPage() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell><b>ID da Consulta</b></TableCell>
+                <TableCell><b>ID</b></TableCell>
                 <TableCell><b>Paciente</b></TableCell>
+                <TableCell><b>Telefone</b></TableCell>
+                <TableCell><b>Médico</b></TableCell>
                 <TableCell><b>Data</b></TableCell>
+                <TableCell><b>Hora</b></TableCell>
                 <TableCell><b>Sala</b></TableCell>
-                <TableCell><b>Início</b></TableCell>
-                <TableCell><b>Fim</b></TableCell>
                 <TableCell><b>Ações</b></TableCell>
               </TableRow>
             </TableHead>
@@ -207,11 +292,12 @@ export default function AgendamentoPage() {
               {agendamentos.map((a) => (
                 <TableRow key={a.id}>
                   <TableCell>{a.id}</TableCell>
-                  <TableCell>{getPacienteNome(a.pacienteId)}</TableCell>
+                  <TableCell>{getUserNome(a.pacienteId, "paciente")}</TableCell>
+                  <TableCell>{a.telefone}</TableCell>
+                  <TableCell>{getUserNome(a.medicoId, "medico")}</TableCell>
                   <TableCell>{a.data}</TableCell>
+                  <TableCell>{a.hora}</TableCell>
                   <TableCell>{a.sala}</TableCell>
-                  <TableCell>{a.inicio}</TableCell>
-                  <TableCell>{a.fim}</TableCell>
                   <TableCell>
                     <Button
                       variant="outlined"

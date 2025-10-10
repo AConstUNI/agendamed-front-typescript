@@ -118,10 +118,6 @@ export default function Login() {
             fullWidth
           />
 
-          <Typography mb={2}>
-            Não possui conta? <Link href="/access/signup" underline="hover">Cadastrar conta</Link>
-          </Typography>
-
           <Box display="flex" justifyContent="flex-end" mt={2}>
             <Button
               variant="contained"
