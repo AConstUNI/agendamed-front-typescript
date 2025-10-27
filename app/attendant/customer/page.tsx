@@ -1,5 +1,6 @@
 'use client'
 
+import { getUserSession } from "@/app/.lib/auth";
 import {
   Box,
   Button,
@@ -55,10 +56,12 @@ export default function CustomerRegistration() {
     if (!customerEverythingRight()) return;
 
     try {
+      const user = await getUserSession(sessionStorage.getItem("jwtToken") || '')
+      
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_LINK}/users/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(customerFormData),
+        body: JSON.stringify({...customerFormData, who: user.email}),
       });
 
       if (!response.ok) {
