@@ -29,13 +29,13 @@ export default function HomePageClient() {
           router.push('/main');
           break;
         case 'atendent':
-          router.push('/attendant');
+          router.push('/attendant/scheduling');
           break;
         case 'doctor':
           router.push('/doctor');
           break;
         case 'admin':
-          router.push('/manager');
+          router.push('/manager/log');
           break;
         default:
           router.push('/access/login');

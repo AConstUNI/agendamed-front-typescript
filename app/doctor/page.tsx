@@ -98,12 +98,49 @@ export default function AgendamentoMedicoPage() {
         return;
       }
 
-      setAgendamentos((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, status } : a))
-      );
+      await fetchAgendamentosMedico()
     } catch (e) {
       console.error(e);
       alert("Erro ao atualizar status. Tente novamente.");
+    }
+  };
+
+  const deleteAgendamento = async (id: number) => {
+    const jwt = sessionStorage.getItem("jwtToken"); // make sure the key matches what you store
+    if (!jwt) {
+      alert("Usuário não autenticado!");
+      return;
+    }
+
+    const user = await getUserSession(jwt);
+    if (!user || !user.email) {
+      alert("Não foi possível identificar o usuário.");
+      return;
+    }
+
+    if (!confirm("Tem certeza que deseja desmarcar este agendamento?")) return;
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_LINK}/agendamento/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({ who: user.email }), // matches your NestJS @Body('who')
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        alert(errorData.message || "Erro ao desmarcar agendamento!");
+        return;
+      }
+
+      await fetchAgendamentosMedico()
+      alert("Agendamento removido com sucesso!");
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao remover agendamento. Tente novamente.");
     }
   };
 
@@ -155,7 +192,7 @@ export default function AgendamentoMedicoPage() {
                       variant="outlined"
                       color="error"
                       size="small"
-                      onClick={() => atualizarStatus(a.id, "desmarcada")}
+                      onClick={() => deleteAgendamento(a.id)}
                       disabled={a.status === "desmarcada"}
                     >
                       Consulta Desmarcada

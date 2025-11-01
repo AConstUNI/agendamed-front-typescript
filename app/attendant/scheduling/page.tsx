@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef } from "react";
 import {
   Container,
   Typography,
@@ -18,7 +18,10 @@ import {
   MenuItem,
   InputLabel,
   FormControl,
+  Autocomplete,
 } from "@mui/material";
+import { getUserSession } from "@/app/.lib/auth";
+import { IMaskInput } from "react-imask";
 
 interface Agendamento {
   id: number;
@@ -28,7 +31,15 @@ interface Agendamento {
   hora: string;
   sala: string;
   telefone: string;
-  medico?: { id: number; name: string; specialty: string };
+  active?: boolean;
+  paciente?: { id: number; name: string };
+  medico?: {
+    id: number;
+    crm: string;
+    specialty: string;
+    phone: string;
+    user: { id: number; name: string };
+  };
 }
 
 interface Paciente {
@@ -44,36 +55,81 @@ interface Medico {
   specialty: string;
 }
 
+// Phone input component
+const PhoneMaskCustom = forwardRef(function PhoneMaskCustom(
+  props: any,
+  ref: React.Ref<HTMLInputElement>,
+) {
+  const { onChange, ...other } = props;
+  return (
+    <IMaskInput
+      {...other}
+      mask="(00) 00000-0000"
+      definitions={{
+        '0': /[0-9]/,
+      }}
+      inputRef={ref}
+      onAccept={(value: string) => onChange({ target: { name: props.name, value } })}
+      overwrite
+    />
+  );
+});
+
 export default function AgendamentoPage() {
   const [pacienteId, setPacienteId] = useState<number | "">("");
   const [medicoId, setMedicoId] = useState<number | "">("");
+  const [medicoInput, setMedicoInput] = useState("");
   const [data, setData] = useState("");
   const [hora, setHora] = useState("");
-  const [sala, setSala] = useState("");
   const [telefone, setTelefone] = useState("");
+  const [sala, setSala] = useState("");
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [editando, setEditando] = useState<number | null>(null);
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [medicos, setMedicos] = useState<Medico[]>([]);
 
+  // Horários fixos possíveis
   const horariosDisponiveis = [
-    "08:00","08:30","09:00","09:30","10:00","10:30",
-    "11:00","11:30","13:00","13:30","14:00","14:30",
-    "15:00","15:30","16:00","16:30","17:00"
+    "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
+    "11:00", "11:30", "13:00", "13:30", "14:00", "14:30",
+    "15:00", "15:30", "16:00", "16:30", "17:00"
   ];
 
+  // Restringe para datas futuras
+  const getMinDate = () => {
+    const hoje = new Date();
+    hoje.setDate(hoje.getDate());
+    return hoje.toISOString().split("T")[0];
+  };
+
+  // Retorna horários disponíveis (sem horários passados se for hoje)
+  const getHorariosDisponiveis = () => {
+    if (!data) return [];
+    const agora = new Date();
+    const hoje = agora.toISOString().split("T")[0];
+
+    if (data > hoje) return horariosDisponiveis;
+    if (data === hoje) {
+      const horaAtual = agora.toTimeString().slice(0, 5);
+      return horariosDisponiveis.filter(h => h > horaAtual);
+    }
+    return [];
+  };
+
+  // Busca todos os pacientes
   const fetchPacientes = async () => {
     if (!process.env.NEXT_PUBLIC_API_LINK) return;
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_LINK}/users/all`);
       if (!res.ok) return;
       const data: Paciente[] = await res.json();
-      setPacientes(data.filter((u) => u.role?.toLowerCase() === "user"));
+      setPacientes(data.filter(u => u.role?.toLowerCase() === "user"));
     } catch (e) {
       console.error("Erro ao buscar pacientes:", e);
     }
   };
 
+  // Busca todos os agendamentos
   const fetchAgendamentos = async () => {
     if (!process.env.NEXT_PUBLIC_API_LINK) return;
     try {
@@ -86,6 +142,7 @@ export default function AgendamentoPage() {
     }
   };
 
+  // Busca médicos disponíveis para a data e hora selecionadas
   const fetchMedicosDisponiveis = async () => {
     if (!data || !hora || !process.env.NEXT_PUBLIC_API_LINK) {
       setMedicos([]);
@@ -93,9 +150,7 @@ export default function AgendamentoPage() {
     }
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_LINK}/agendamento/disponiveis?data=${data}&hora=${hora}`
-      );
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_LINK}/agendamento/disponiveis?data=${data}&hora=${hora}`);
       if (!res.ok) {
         setMedicos([]);
         return;
@@ -110,12 +165,13 @@ export default function AgendamentoPage() {
         specialty: d.specialty,
       }));
 
+      // Mantém o médico do agendamento ao editar
       if (editando) {
         const ag = agendamentos.find(a => a.id === editando);
-        if (ag && !mappedMedicos.some(m => m.id === ag.medicoId) && ag.medico) {
+        if (ag && ag.medico && !mappedMedicos.some(m => m.id === ag.medicoId)) {
           mappedMedicos.push({
             id: ag.medico.id,
-            name: `${ag.medico.name} - ${ag.medico.specialty}`,
+            name: `${ag.medico.user.name} - ${ag.medico.specialty}`,
             role: "doctor",
             specialty: ag.medico.specialty,
           });
@@ -129,9 +185,16 @@ export default function AgendamentoPage() {
     }
   };
 
-  useEffect(() => { fetchPacientes(); fetchAgendamentos(); }, []);
-  useEffect(() => { fetchMedicosDisponiveis(); }, [data, hora, editando]);
+  useEffect(() => {
+    fetchPacientes();
+    fetchAgendamentos();
+  }, []);
 
+  useEffect(() => {
+    fetchMedicosDisponiveis();
+  }, [data, hora, editando]);
+
+  // Criar ou editar agendamento
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pacienteId || !medicoId || !data || !hora || !sala.trim() || !telefone.trim()) {
@@ -140,28 +203,59 @@ export default function AgendamentoPage() {
     }
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_LINK}/agendamento`, {
-        method: "POST",
+      const user = await getUserSession(sessionStorage.getItem("jwtToken") || '')
+
+      const body = {
+        pacienteId: Number(pacienteId),
+        medicoId: Number(medicoId),
+        data,
+        hora,
+        sala,
+        telefone,
+        who: user.email,
+      };
+
+      const method = "POST";
+      const url = `${process.env.NEXT_PUBLIC_API_LINK}/agendamento`;
+
+      
+
+      if (editando) {
+        alert('Para editar a consulta é preciso excluir ela')
+        const _ = await handleCancelar(editando)
+      } 
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pacienteId:Number(pacienteId), medicoId:Number(medicoId), data, hora, sala, telefone }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
         const errorData = await res.json();
-        alert(errorData.message || "Erro ao criar agendamento!");
+        alert(errorData.message || "Erro ao salvar agendamento!");
         return;
       }
 
-      const novo: Agendamento = await res.json();
-      setAgendamentos(editando ? agendamentos.map(a => a.id === editando ? novo : a) : [...agendamentos, novo]);
+      await fetchAgendamentos();
       alert("✅ Agendamento salvo com sucesso!");
-      setPacienteId(""); setMedicoId(""); setData(""); setHora(""); setSala(""); setTelefone(""); setEditando(null);
+
+      // Limpar campos
+      setPacienteId("");
+      setMedicoId("");
+      setData("");
+      setHora("");
+      setTelefone("");
+      setSala("");
+      setMedicoInput("");
+      setEditando(null);
     } catch (e) {
       console.error(e);
       alert("Erro ao criar agendamento. Tente novamente.");
     }
   };
 
+  // Preenche dados ao editar
   const handleEditar = (a: Agendamento) => {
     setPacienteId(a.pacienteId);
     setMedicoId(a.medicoId);
@@ -170,10 +264,30 @@ export default function AgendamentoPage() {
     setSala(a.sala);
     setTelefone(a.telefone);
     setEditando(a.id);
+    setMedicoInput(a.medico?.user?.name || "");
   };
 
-  const handleCancelar = (id: number) => {
-    setAgendamentos(agendamentos.filter(a => a.id !== id));
+  // Cancela (deleta) agendamento
+  const handleCancelar = async (id: number) => {
+    if (!confirm("Deseja realmente cancelar este agendamento?")) return;
+    try {
+      const user = await getUserSession(sessionStorage.getItem("jwtToken") || '')
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_LINK}/agendamento/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ who: user.email }),
+      });
+
+      if (!res.ok) throw new Error("Erro ao cancelar agendamento");
+      setAgendamentos(agendamentos.filter(a => a.id !== id));
+      alert("❌ Agendamento cancelado com sucesso.");
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao cancelar agendamento.");
+    }
   };
 
   const getUserNome = (id: number, tipo: "paciente" | "medico") => {
@@ -181,49 +295,93 @@ export default function AgendamentoPage() {
     return lista.find(u => u.id === id)?.name || "Desconhecido";
   };
 
+  // ==================== JSX ====================
   return (
     <Container sx={{ mt: 4 }}>
       <Typography variant="h4" fontWeight="bold" gutterBottom>
         Agendamento de Consultas
       </Typography>
 
-      <Box component="form" onSubmit={handleSubmit} sx={{ display:"grid", gap:2, mb:4 }}>
+      <Box component="form" onSubmit={handleSubmit} sx={{ display: "grid", gap: 2, mb: 4 }}>
         {/* Paciente */}
         <FormControl fullWidth>
-          <InputLabel>Paciente</InputLabel>
-          <Select value={pacienteId} onChange={e => setPacienteId(e.target.value as number)} label="Paciente" required>
+          <InputLabel id='label-paciente'>Paciente</InputLabel>
+          <Select
+            labelId="label-paciente"
+            value={pacienteId}
+            onChange={e => setPacienteId(e.target.value as number)}
+            label='Pacient'
+            required
+          >
             <MenuItem value=""><em>Selecione um paciente</em></MenuItem>
-            {pacientes.map(p => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
+            {pacientes.map(p => (
+              <MenuItem key={p.id} value={p.id}>
+                {p.name}
+              </MenuItem>
+            ))}
           </Select>
         </FormControl>
 
-        <TextField label="Telefone de Contato" value={telefone} onChange={e => setTelefone(e.target.value)} required/>
-        <TextField label="Data da Consulta" type="date" InputLabelProps={{ shrink:true }} value={data} onChange={e => setData(e.target.value)} required/>
+        {/* Phone with mask */}
+        <TextField
+          label="Telefone de Contato"
+          fullWidth
+          name="phone"
+          value={telefone}
+          onChange={(e) => setTelefone(e.target.value)}
+          InputProps={{
+            inputComponent: PhoneMaskCustom as any,
+          }}
+        />
+
+        <TextField
+          label="Data da Consulta"
+          type="date"
+          InputLabelProps={{ shrink: true }}
+          value={data}
+          onChange={e => setData(e.target.value)}
+          inputProps={{ min: getMinDate() }}
+          required
+        />
 
         <FormControl fullWidth>
-          <InputLabel>Horário</InputLabel>
-          <Select value={hora} onChange={e => setHora(e.target.value)} required>
+          <InputLabel id="horario-label">Horário</InputLabel>
+          <Select labelId="horario-label" value={hora} onChange={e => setHora(e.target.value)} label="Horár" required>
             <MenuItem value=""><em>Selecione um horário</em></MenuItem>
-            {horariosDisponiveis.map(h => <MenuItem key={h} value={h}>{h}</MenuItem>)}
+            {getHorariosDisponiveis().map(h => (
+              <MenuItem key={h} value={h}>{h}</MenuItem>
+            ))}
           </Select>
         </FormControl>
 
-        <FormControl fullWidth>
-          <InputLabel>Médico Disponível</InputLabel>
-          <Select value={medicoId} onChange={e => setMedicoId(e.target.value as number)} onOpen={fetchMedicosDisponiveis} required>
-            <MenuItem value=""><em>Selecione um médico</em></MenuItem>
-            {medicos.map(m => <MenuItem key={m.id} value={m.id}>{m.name}</MenuItem>)}
-          </Select>
-        </FormControl>
+        {/* Médico com autocomplete */}
+        <Autocomplete
+          options={medicos}
+          getOptionLabel={(option) => option.name}
+          value={medicos.find(m => m.id === medicoId) || null}
+          inputValue={medicoInput}
+          onInputChange={(e, newInput) => setMedicoInput(newInput)}
+          onChange={(e, newValue) => setMedicoId(newValue ? newValue.id : "")}
+          renderInput={(params) => <TextField {...params} label="Médico Disponível" required />}
+        />
 
-        <TextField label="Sala" value={sala} onChange={e => setSala(e.target.value)} required/>
-        <Button type="submit" variant="contained" color={editando ? "success":"primary"}>
+        <TextField
+          label="Sala"
+          value={sala}
+          onChange={e => setSala(e.target.value)}
+          required
+        />
+
+        <Button type="submit" variant="contained" color={editando ? "success" : "primary"}>
           {editando ? "Salvar Alterações" : "Confirmar Agendamento"}
         </Button>
       </Box>
 
-      <Typography variant="h5" gutterBottom>Agendamentos</Typography>
-      {agendamentos.length === 0 ? <Typography>Nenhum agendamento registrado ainda.</Typography> : (
+      {/* Tabela de agendamentos */}
+      <Typography variant="h5" gutterBottom>Todos os Agendamentos</Typography>
+      {agendamentos.length === 0 ? (
+        <Typography>Nenhum agendamento registrado ainda.</Typography>
+      ) : (
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -242,15 +400,30 @@ export default function AgendamentoPage() {
               {agendamentos.map(a => (
                 <TableRow key={a.id}>
                   <TableCell>{a.id}</TableCell>
-                  <TableCell>{getUserNome(a.pacienteId,"paciente")}</TableCell>
+                  <TableCell>{getUserNome(a.pacienteId, "paciente")}</TableCell>
                   <TableCell>{a.telefone}</TableCell>
-                  <TableCell>{getUserNome(a.medicoId,"medico")}</TableCell>
+                  <TableCell>{a.medico?.user?.name}</TableCell>
                   <TableCell>{a.data}</TableCell>
                   <TableCell>{a.hora}</TableCell>
                   <TableCell>{a.sala}</TableCell>
                   <TableCell>
-                    <Button variant="outlined" color="warning" size="small" onClick={() => handleEditar(a)} sx={{mr:1}}>Editar</Button>
-                    <Button variant="outlined" color="error" size="small" onClick={() => handleCancelar(a.id)}>Cancelar</Button>
+                    <Button
+                      variant="outlined"
+                      color="warning"
+                      size="small"
+                      onClick={() => handleEditar(a)}
+                      sx={{ mr: 1 }}
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      onClick={() => handleCancelar(a.id)}
+                    >
+                      Cancelar
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
