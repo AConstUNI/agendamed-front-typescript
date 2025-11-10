@@ -11,6 +11,7 @@ import {
   TextField,
   Alert,
   Collapse,
+  Typography,
 } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import { useState, useEffect, forwardRef } from "react";
@@ -26,9 +27,7 @@ const PhoneMaskCustom = forwardRef(function PhoneMaskCustom(
     <IMaskInput
       {...other}
       mask="(00) 00000-0000"
-      definitions={{
-        '0': /[0-9]/,
-      }}
+      definitions={{ '0': /[0-9]/ }}
       inputRef={ref}
       onAccept={(value: string) => onChange({ target: { name: props.name, value } })}
       overwrite
@@ -37,28 +36,23 @@ const PhoneMaskCustom = forwardRef(function PhoneMaskCustom(
 });
 
 export default function StaffRegistration() {
-  // -------------------- Doctor State --------------------
   const doctorHelperTextsBase = { name: "", email: "", password: "", crm: "", specialty: "", phone: "" };
+  const attendantHelperTextsBase = { name: "", email: "", password: "" };
+
   const [doctorOpen, setDoctorOpen] = useState(false);
   const [doctorAlertOpen, setDoctorAlertOpen] = useState(false);
   const [doctorAlertMessage, setDoctorAlertMessage] = useState("");
-  const [doctorFormData, setDoctorFormData] = useState({
-    name: "", email: "", password: "", crm: "", specialty: "", phone: ""
-  });
+  const [doctorFormData, setDoctorFormData] = useState({ name: "", email: "", password: "", crm: "", specialty: "", phone: "" });
   const [doctorHelperTexts, setDoctorHelperTexts] = useState({ ...doctorHelperTextsBase });
 
-  // -------------------- Attendant State --------------------
-  const attendantHelperTextsBase = { name: "", email: "", password: "" };
   const [attendantOpen, setAttendantOpen] = useState(false);
   const [attendantAlertOpen, setAttendantAlertOpen] = useState(false);
   const [attendantAlertMessage, setAttendantAlertMessage] = useState("");
   const [attendantFormData, setAttendantFormData] = useState({ name: "", email: "", password: "" });
   const [attendantHelperTexts, setAttendantHelperTexts] = useState({ ...attendantHelperTextsBase });
 
-  // -------------------- Users Table --------------------
   const [users, setUsers] = useState<any[]>([]);
 
-  // -------------------- Helpers --------------------
   const handleChange = (form: 'doctor' | 'attendant', field: string, value: string) => {
     if (form === 'doctor') {
       setDoctorFormData({ ...doctorFormData, [field]: value });
@@ -71,11 +65,10 @@ export default function StaffRegistration() {
 
   const validateEmail = (email: string) => {
     if (!email) return "Insira um email";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Email Inválido";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Email inválido";
     return "";
   };
 
-  // -------------------- Doctor Functions --------------------
   const doctorEverythingRight = () => {
     const tempHelper = { ...doctorHelperTextsBase };
     if (!doctorFormData.name) tempHelper.name = "Insira um nome";
@@ -88,7 +81,7 @@ export default function StaffRegistration() {
   };
 
   const handleDoctorSubmit = async () => {
-    if (!process.env.NEXT_PUBLIC_API_LINK) throw "API link not found";
+    if (!process.env.NEXT_PUBLIC_API_LINK) return;
     if (!doctorEverythingRight()) return;
 
     try {
@@ -100,7 +93,7 @@ export default function StaffRegistration() {
 
       if (!response.ok) {
         setDoctorAlertOpen(true);
-        setDoctorAlertMessage("Informações não aceitas na API");
+        setDoctorAlertMessage("Informações não aceitas pela API");
         return;
       }
 
@@ -109,13 +102,11 @@ export default function StaffRegistration() {
       setDoctorHelperTexts({ ...doctorHelperTextsBase });
       fetchUsers();
     } catch (e) {
-      console.log(e);
       setDoctorAlertOpen(true);
       setDoctorAlertMessage("Erro ao enviar as informações para a API");
     }
   };
 
-  // -------------------- Attendant Functions --------------------
   const attendantEverythingRight = () => {
     const tempHelper = { ...attendantHelperTextsBase };
     if (!attendantFormData.name) tempHelper.name = "Insira um nome";
@@ -126,7 +117,7 @@ export default function StaffRegistration() {
   };
 
   const handleAttendantSubmit = async () => {
-    if (!process.env.NEXT_PUBLIC_API_LINK) throw "API link not found";
+    if (!process.env.NEXT_PUBLIC_API_LINK) return;
     if (!attendantEverythingRight()) return;
 
     try {
@@ -138,7 +129,7 @@ export default function StaffRegistration() {
 
       if (!response.ok) {
         setAttendantAlertOpen(true);
-        setAttendantAlertMessage("Informações não aceitas na API");
+        setAttendantAlertMessage("Informações não aceitas pela API");
         return;
       }
 
@@ -147,13 +138,11 @@ export default function StaffRegistration() {
       setAttendantHelperTexts({ ...attendantHelperTextsBase });
       fetchUsers();
     } catch (e) {
-      console.log(e);
       setAttendantAlertOpen(true);
       setAttendantAlertMessage("Erro ao enviar as informações para a API");
     }
   };
 
-  // -------------------- Fetch Users --------------------
   const fetchUsers = async () => {
     if (!process.env.NEXT_PUBLIC_API_LINK) return;
     try {
@@ -166,11 +155,8 @@ export default function StaffRegistration() {
     }
   };
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  useEffect(() => { fetchUsers(); }, []);
 
-  // -------------------- Columns --------------------
   const userColumns: GridColDef[] = [
     { field: "id", headerName: "ID", width: 70 },
     { field: "name", headerName: "Nome", width: 200 },
@@ -178,140 +164,108 @@ export default function StaffRegistration() {
     { field: "role", headerName: "Função", width: 150 },
   ];
 
+  const dialogStyle = {
+    borderRadius: 3,
+    boxShadow: "0 8px 25px rgba(0,0,0,0.15)",
+    backgroundColor: "#fdfdfd",
+  };
+
+  const buttonStyle = {
+    borderRadius: 2,
+    textTransform: "none",
+    fontWeight: 600,
+    py: 1.2,
+    px: 3,
+  };
+
   return (
-    <Box>
-      {/* Buttons */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-        <Button variant="outlined" onClick={() => setDoctorOpen(true)}>Cadastrar Médico</Button>
-        <Button variant="outlined" onClick={() => setAttendantOpen(true)}>Cadastrar Atendente</Button>
+    <Box sx={{ p: { xs: 2, md: 4 } }}>
+      {/* Action Buttons */}
+      <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+        <Button variant="contained" color="primary" sx={buttonStyle} onClick={() => setDoctorOpen(true)}>
+          Cadastrar Médico
+        </Button>
+        <Button variant="contained" color="secondary" sx={buttonStyle} onClick={() => setAttendantOpen(true)}>
+          Cadastrar Atendente
+        </Button>
       </Box>
 
       {/* Users Table */}
-      <DataGrid rows={users} columns={userColumns} pageSizeOptions={[5, 10]} checkboxSelection sx={{ border: 0, mb: 2 }} />
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <DataGrid
+        rows={users}
+        columns={userColumns}
+        pageSizeOptions={[5, 10, 25]}
+        sx={{
+          border: 0,
+          borderRadius: 2,
+          boxShadow: "0 2px 12px rgba(0,0,0,0.1)",
+          "& .MuiDataGrid-columnHeaders": {
+            backgroundColor: "#f3f6f9",
+            fontWeight: 700,
+            fontSize: 14,
+            color: "#344eb5",
+          },
+          "& .MuiDataGrid-row": {
+            transition: "all 0.2s",
+          },
+          "& .MuiDataGrid-row:hover": {
+            backgroundColor: "rgba(52, 78, 181, 0.08)",
+          },
+          "& .MuiDataGrid-footerContainer": {
+            borderTop: "none",
+            backgroundColor: "#f9f9f9",
+          },
+        }}
+        getRowClassName={(params) =>
+          params.indexRelativeToCurrentPage % 2 === 0 ? "even" : "odd"
+        }
+      />
+      </div>
 
       {/* Doctor Dialog */}
-      <Dialog open={doctorOpen} onClose={() => setDoctorOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Cadastro de Médico</DialogTitle>
+      <Dialog open={doctorOpen} onClose={() => setDoctorOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: dialogStyle }}>
+        <DialogTitle sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
+          Cadastro de Médico
+        </DialogTitle>
         <DialogContent>
-          <Collapse in={doctorAlertOpen}>
-            <Alert
-              action={
-                <Button size="small" onClick={() => setDoctorAlertOpen(false)}>
-                  Fechar
-                </Button>
-              }
-              severity="error"
-              sx={{ mb: 2 }}
-            >
+          <Collapse in={doctorAlertOpen} sx={{ mb: 2 }}>
+            <Alert severity="error" action={<Button size="small" onClick={() => setDoctorAlertOpen(false)}>Fechar</Button>}>
               {doctorAlertMessage}
             </Alert>
           </Collapse>
-
           <FormControl fullWidth>
-            {/* Name */}
-            <TextField
-              label="Nome"
-              variant="filled"
-              margin="normal"
-              fullWidth
-              required
-              value={doctorFormData.name}
-              onChange={(e) => handleChange('doctor', 'name', e.target.value)}
-              helperText={doctorHelperTexts.name}
-              error={doctorHelperTexts.name !== ""}
-            />
-
-            {/* Email */}
-            <TextField
-              label="Email"
-              variant="filled"
-              margin="normal"
-              fullWidth
-              required
-              value={doctorFormData.email}
-              onChange={(e) => handleChange('doctor', 'email', e.target.value)}
-              helperText={doctorHelperTexts.email}
-              error={doctorHelperTexts.email !== ""}
-            />
-
-            {/* Password */}
-            <TextField
-              label="Senha"
-              variant="filled"
-              margin="normal"
-              fullWidth
-              required
-              type="password"
-              value={doctorFormData.password}
-              onChange={(e) => handleChange('doctor', 'password', e.target.value)}
-              helperText={doctorHelperTexts.password}
-              error={doctorHelperTexts.password !== ""}
-            />
-
-            {/* CRM */}
-            <TextField
-              label="CRM"
-              variant="filled"
-              margin="normal"
-              fullWidth
-              required
-              value={doctorFormData.crm}
-              onChange={(e) => handleChange('doctor', 'crm', e.target.value)}
-              helperText={doctorHelperTexts.crm}
-              error={doctorHelperTexts.crm !== ""}
-            />
-
-            {/* Specialty */}
-            <TextField
-              label="Especialidade"
-              variant="filled"
-              margin="normal"
-              fullWidth
-              required
-              value={doctorFormData.specialty}
-              onChange={(e) => handleChange('doctor', 'specialty', e.target.value)}
-              helperText={doctorHelperTexts.specialty}
-              error={doctorHelperTexts.specialty !== ""}
-            />
-
-            {/* Phone with mask */}
-            <TextField
-              label="Telefone"
-              variant="filled"
-              margin="normal"
-              fullWidth
-              name="phone"
-              value={doctorFormData.phone}
-              onChange={(e) => handleChange('doctor', 'phone', e.target.value)}
-              InputProps={{
-                inputComponent: PhoneMaskCustom as any,
-              }}
-              helperText={doctorHelperTexts.phone}
-              error={doctorHelperTexts.phone !== ""}
-            />
+            {['name', 'email', 'password', 'crm', 'specialty', 'phone'].map((field) => (
+              <TextField
+                key={field}
+                label={field === 'crm' ? 'CRM' : field.charAt(0).toUpperCase() + field.slice(1)}
+                variant="outlined"
+                margin="normal"
+                fullWidth
+                type={field === 'password' ? 'password' : 'text'}
+                value={(doctorFormData as any)[field]}
+                onChange={(e) => handleChange('doctor', field, e.target.value)}
+                helperText={(doctorHelperTexts as any)[field]}
+                error={(doctorHelperTexts as any)[field] !== ""}
+                InputProps={field === 'phone' ? { inputComponent: PhoneMaskCustom as any } : undefined}
+              />
+            ))}
           </FormControl>
         </DialogContent>
-
         <DialogActions>
-          <Button
-            onClick={() =>
-              setDoctorFormData({ name: "", email: "", password: "", crm: "", specialty: "", phone: "" })
-            }
-          >
-            Limpar
-          </Button>
-          <Button onClick={handleDoctorSubmit} autoFocus>
-            Cadastrar
-          </Button>
+          <Button onClick={() => setDoctorFormData({ name: "", email: "", password: "", crm: "", specialty: "", phone: "" })}>Limpar</Button>
+          <Button variant="contained" color="primary" onClick={handleDoctorSubmit}>Cadastrar</Button>
         </DialogActions>
       </Dialog>
 
       {/* Attendant Dialog */}
-      <Dialog open={attendantOpen} onClose={() => setAttendantOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Cadastro de Atendente</DialogTitle>
+      <Dialog open={attendantOpen} onClose={() => setAttendantOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: dialogStyle }}>
+        <DialogTitle sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
+          Cadastro de Atendente
+        </DialogTitle>
         <DialogContent>
-          <Collapse in={attendantAlertOpen}>
-            <Alert action={<Button size="small" onClick={() => setAttendantAlertOpen(false)}>Fechar</Button>} severity="error" sx={{ mb: 2 }}>
+          <Collapse in={attendantAlertOpen} sx={{ mb: 2 }}>
+            <Alert severity="error" action={<Button size="small" onClick={() => setAttendantAlertOpen(false)}>Fechar</Button>}>
               {attendantAlertMessage}
             </Alert>
           </Collapse>
@@ -320,9 +274,8 @@ export default function StaffRegistration() {
               <TextField
                 key={field}
                 label={field.charAt(0).toUpperCase() + field.slice(1)}
-                variant="filled"
+                variant="outlined"
                 margin="normal"
-                required
                 fullWidth
                 type={field === 'password' ? 'password' : 'text'}
                 value={(attendantFormData as any)[field]}
@@ -335,7 +288,7 @@ export default function StaffRegistration() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAttendantFormData({ name: "", email: "", password: "" })}>Limpar</Button>
-          <Button onClick={handleAttendantSubmit} autoFocus>Cadastrar</Button>
+          <Button variant="contained" color="secondary" onClick={handleAttendantSubmit}>Cadastrar</Button>
         </DialogActions>
       </Dialog>
     </Box>

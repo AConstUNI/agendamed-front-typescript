@@ -1,11 +1,11 @@
 'use client'
 
-import { Alert, Box, Button, Card, Collapse, FormControl, Link, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, Card, Collapse, FormControl, TextField, Typography } from "@mui/material";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function Login() {
-  
+
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,7 +15,7 @@ export default function Login() {
 
   useEffect(() => {
     sessionStorage.removeItem("jwtToken")
-  })
+  }, []);
 
   const validateEmail = (email: string) => {
     if (!email) return "Insira um email";
@@ -45,20 +45,14 @@ export default function Login() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.log(errorData);
         setAlertOpen(true);
         setAlertMessage("Credenciais inválidas ou erro no servidor");
         return;
       }
 
       const data = await response.json();
-
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem("jwtToken", data.access_token);
-      }
-
-      router.push('/')
+      sessionStorage.setItem("jwtToken", data.access_token);
+      router.push('/');
     } catch (e) {
       console.log(e);
       setAlertOpen(true);
@@ -72,12 +66,41 @@ export default function Login() {
       justifyContent="center"
       alignItems="center"
       minHeight="100vh"
-      bgcolor="#344eb5ff"
-      p={2}
+      sx={{
+        background: "linear-gradient(135deg, #5a91f8 0%, #344eb5 100%)",
+        p: 2
+      }}
     >
-      <Card sx={{ p: { xs: 2, sm: 4 }, width: "100%", maxWidth: 450, boxShadow: 3 }}>
-        <Typography variant="h4" textAlign="center" mb={3} fontWeight={600} color="primary">
-          Login
+      <Card
+        sx={{
+          p: { xs: 3, sm: 5 },
+          width: "100%",
+          maxWidth: 400,
+          borderRadius: 3,
+          boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+          backgroundColor: "rgba(255,255,255,0.95)",
+          transition: "transform 0.3s",
+          "&:hover": {
+            transform: "scale(1.02)"
+          }
+        }}
+      >
+        <Typography
+          variant="h4"
+          textAlign="center"
+          mb={3}
+          fontWeight={700}
+          color="primary"
+        >
+          Bem-vindo
+        </Typography>
+        <Typography
+          variant="body1"
+          textAlign="center"
+          mb={4}
+          color="text.secondary"
+        >
+          Faça login para agendar suas consultas médicas
         </Typography>
 
         <Collapse in={alertOpen}>
@@ -95,7 +118,7 @@ export default function Login() {
         <FormControl fullWidth>
           <TextField
             label="Email"
-            variant="filled"
+            variant="outlined"
             margin="normal"
             type="email"
             autoComplete="email"
@@ -108,7 +131,7 @@ export default function Login() {
           <TextField
             label="Senha"
             type="password"
-            variant="filled"
+            variant="outlined"
             margin="normal"
             autoComplete="current-password"
             value={password}
@@ -122,7 +145,16 @@ export default function Login() {
             <Button
               variant="contained"
               onClick={() => { if (everythingRight()) handleLoginSubmit(); }}
-              sx={{ py: 1.5, fontWeight: 600, px: 3 }}
+              sx={{
+                py: 1.5,
+                fontWeight: 600,
+                px: 4,
+                backgroundColor: "#5a91f8",
+                color: "#fff",
+                "&:hover": { backgroundColor: "#3b6fd1" },
+                borderRadius: 2,
+              }}
+              fullWidth
             >
               Entrar
             </Button>

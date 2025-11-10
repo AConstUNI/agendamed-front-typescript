@@ -13,6 +13,7 @@ import {
   TableHead,
   TableRow,
   Alert,
+  Button,
 } from '@mui/material';
 
 interface AdminLog {
@@ -28,26 +29,28 @@ export default function Log() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchLogs = async () => {
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_LINK}/admin/logs`);
-        if (!res.ok) throw new Error('Failed to fetch admin logs');
-        const data = await res.json();
-        setLogs(data);
-      } catch (err: any) {
-        setError(err.message || 'Something went wrong');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchLogs = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_LINK}/admin/logs`);
+      if (!res.ok) throw new Error('Falha ao buscar logs');
+      const data = await res.json();
+      setLogs(data);
+    } catch (err: any) {
+      setError(err.message || 'Algo deu errado');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchLogs();
-  });
+  }, []);
 
   return (
-    <Box sx={{ p: 4 }}>
-      <Typography variant="h4" gutterBottom>
+    <Box sx={{ p: { xs: 2, md: 4 } }}>
+      <Typography variant="h4" gutterBottom fontWeight={600}>
         Admin Logs
       </Typography>
 
@@ -59,29 +62,62 @@ export default function Log() {
 
       {error && (
         <Alert severity="error" sx={{ mt: 2 }}>
-          {error}
+          {error} &nbsp;
+          <Button size="small" variant="outlined" onClick={fetchLogs}>
+            Tentar novamente
+          </Button>
         </Alert>
       )}
 
       {!loading && !error && (
-        <TableContainer component={Paper} sx={{ mt: 3 }}>
-          <Table>
+        <TableContainer
+          component={Paper}
+          sx={{
+            mt: 3,
+            maxHeight: '70vh',
+            overflowY: 'auto',
+            borderRadius: 2,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+          }}
+        >
+          <Table stickyHeader>
             <TableHead>
-              <TableRow>
-                <TableCell><strong>Data</strong></TableCell>
-                <TableCell><strong>Quem</strong></TableCell>
-                <TableCell><strong>Ação</strong></TableCell>
-                <TableCell><strong>Target</strong></TableCell>
+              <TableRow sx={{ backgroundColor: '#f3f6f9' }}>
+                <TableCell sx={{ fontWeight: 700 }}>Data</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Quem</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Ação</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Target</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {logs.map((log) => (
-                <TableRow key={log.id}>
+              {logs.map((log, idx) => (
+                <TableRow
+                  key={log.id}
+                  sx={{
+                    backgroundColor: idx % 2 === 0 ? '#fff' : '#f9f9f9',
+                    '&:hover': { backgroundColor: 'rgba(52,78,181,0.08)' },
+                  }}
+                >
                   <TableCell>
-                    {new Date(log.createdAt).toLocaleString()}
+                    {new Date(log.createdAt).toLocaleString('pt-BR', {
+                      dateStyle: 'short',
+                      timeStyle: 'short',
+                    })}
                   </TableCell>
                   <TableCell>{log.adminEmail}</TableCell>
-                  <TableCell>{log.action}</TableCell>
+                  <TableCell
+                    sx={{
+                      fontWeight: 600,
+                      color:
+                        log.action.toLowerCase().includes('delete')
+                          ? '#d32f2f'
+                          : log.action.toLowerCase().includes('update')
+                          ? '#ed6c02'
+                          : '#1976d2',
+                    }}
+                  >
+                    {log.action}
+                  </TableCell>
                   <TableCell>{log.target || '-'}</TableCell>
                 </TableRow>
               ))}

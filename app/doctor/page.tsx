@@ -145,65 +145,61 @@ export default function AgendamentoMedicoPage() {
   };
 
   return (
-    <Container sx={{ mt: 4 }}>
-      <Typography variant="h4" fontWeight="bold" gutterBottom>
-        Meus Agendamentos
-      </Typography>
+    <TableContainer component={Paper}>
+      <Table>
+        <TableHead>
+          <TableRow sx={{ backgroundColor: 'grey.200' }}>
+            <TableCell>ID</TableCell>
+            <TableCell>Paciente</TableCell>
+            <TableCell>Telefone</TableCell>
+            <TableCell>Data</TableCell>
+            <TableCell>Hora</TableCell>
+            <TableCell>Sala</TableCell>
+            <TableCell>Status</TableCell>
+            <TableCell>Ações</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {agendamentos.map((a, i) => (
+            <TableRow
+              key={a.id}
+              sx={{
+                backgroundColor: i % 2 ? 'grey.50' : 'white',
+                "&:hover": { backgroundColor: 'action.hover' },
+              }}
+            >
+              <TableCell>{a.id}</TableCell>
+              <TableCell>{a.paciente?.name || "Desconhecido"}</TableCell>
+              <TableCell>{a.telefone}</TableCell>
+              <TableCell>{a.data}</TableCell>
+              <TableCell>{a.hora}</TableCell>
+              <TableCell>{a.sala}</TableCell>
+              <TableCell>{a.status || "Aguardando"}</TableCell>
+              <TableCell sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  variant="outlined"
+                  color="success"
+                  size="small"
+                  onClick={() => atualizarStatus(a.id, "realizada")}
+                  disabled={a.status === "realizada"}
+                >
+                  Realizada
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  onClick={() => deleteAgendamento(a.id)}
+                  disabled={a.status === "desmarcada"}
+                >
+                  Desmarcada
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
 
-      {agendamentos.length === 0 ? (
-        <Typography>Nenhum agendamento registrado ainda.</Typography>
-      ) : (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>ID</TableCell>
-                <TableCell>Paciente</TableCell>
-                <TableCell>Telefone</TableCell>
-                <TableCell>Data</TableCell>
-                <TableCell>Hora</TableCell>
-                <TableCell>Sala</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Ações</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {agendamentos.map((a) => (
-                <TableRow key={a.id}>
-                  <TableCell>{a.id}</TableCell>
-                  <TableCell>{a.paciente?.name || "Desconhecido"}</TableCell>
-                  <TableCell>{a.telefone}</TableCell>
-                  <TableCell>{a.data}</TableCell>
-                  <TableCell>{a.hora}</TableCell>
-                  <TableCell>{a.sala}</TableCell>
-                  <TableCell>{a.status || "agendado"}</TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outlined"
-                      color="success"
-                      size="small"
-                      sx={{ mr: 1 }}
-                      onClick={() => atualizarStatus(a.id, "realizada")}
-                      disabled={a.status === "realizada"}
-                    >
-                      Consulta Realizada
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      size="small"
-                      onClick={() => deleteAgendamento(a.id)}
-                      disabled={a.status === "desmarcada"}
-                    >
-                      Consulta Desmarcada
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-    </Container>
   );
 }

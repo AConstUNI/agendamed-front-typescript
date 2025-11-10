@@ -3,7 +3,6 @@
 import AppBarLayout from "../.components/AppBarLayout"
 
 const menuItems = [
-  { text: "Home", href: "/attendant" },
   { text: "Agendamento", href: "/attendant/scheduling" },
   { text: "Cadastro de Cliente", href: "/attendant/customer" },
 ];

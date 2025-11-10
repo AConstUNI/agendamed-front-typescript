@@ -3,7 +3,7 @@
 import AppBarLayout from "../.components/AppBarLayout"; 
 
 const menuItems = [
-  { text: "Home", href: "/main" },
+  { text: "Agendamentos", href: "/main" },
 ];
 
 export default function MainLayout({

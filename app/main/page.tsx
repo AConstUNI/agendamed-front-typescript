@@ -88,9 +88,9 @@ export default function AgendamentoPage() {
   const [medicos, setMedicos] = useState<Medico[]>([]);
 
   const horariosDisponiveis = [
-    "08:00","08:30","09:00","09:30","10:00","10:30",
-    "11:00","11:30","13:00","13:30","14:00","14:30",
-    "15:00","15:30","16:00","16:30","17:00"
+    "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
+    "11:00", "11:30", "13:00", "13:30", "14:00", "14:30",
+    "15:00", "15:30", "16:00", "16:30", "17:00"
   ];
 
   const getMinDate = () => {
@@ -202,7 +202,7 @@ export default function AgendamentoPage() {
       if (editando) {
         alert('Para editar a consulta é preciso excluir ela')
         const _ = await handleCancelar(editando)
-      } 
+      }
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_LINK}/agendamento`, {
         method: "POST",
@@ -224,11 +224,11 @@ export default function AgendamentoPage() {
         return;
       }
       await fetchAgendamentos(); // refresh the table from backend
-      
+
       alert("✅ Agendamento salvo com sucesso!");
 
       setMedicoId(""); setData(""); setHora(""); setTelefone(""); setEditando(null); setMedicoInput("");
-      
+
     } catch (e) {
       console.error(e);
       alert("Erro ao criar agendamento. Tente novamente.");
@@ -257,7 +257,7 @@ export default function AgendamentoPage() {
         },
         body: JSON.stringify({ who: user.email }),
       });
-      
+
       if (!res.ok) throw new Error("Erro ao cancelar agendamento");
       setAgendamentos(agendamentos.filter(a => a.id !== id));
       alert("❌ Agendamento cancelado com sucesso.");
@@ -273,94 +273,58 @@ export default function AgendamentoPage() {
   };
 
   return (
-    <Container sx={{ mt: 4 }}>
-      <Typography variant="h4" fontWeight="bold" gutterBottom>
-        Minhas Consultas - {getUserNome(Number(pacienteId), "paciente")}
-      </Typography>
-
-      <Box component="form" onSubmit={handleSubmit} sx={{ display:"grid", gap:2, mb:4 }}>
-        {/* Phone with mask */}
-        <TextField
-          label="Telefone de Contato"
-          fullWidth
-          name="phone"
-          value={telefone}
-          onChange={(e) => setTelefone(e.target.value)}
-          InputProps={{
-            inputComponent: PhoneMaskCustom as any,
-          }}
-        />
-        <TextField
-          label="Data da Consulta"
-          type="date"
-          InputLabelProps={{ shrink: true }}
-          value={data}
-          onChange={e => setData(e.target.value)}
-          required
-          inputProps={{ min: getMinDate() }}
-        />
-
-        <FormControl  fullWidth>
-          <InputLabel id="horario-label">Horário</InputLabel>
-          <Select labelId="horario-label" value={hora} onChange={e => setHora(e.target.value)} label="Horár" required>
-            <MenuItem value=""><em>Selecione um horário</em></MenuItem>
-            {getHorariosDisponiveis().map(h => <MenuItem key={h} value={h}>{h}</MenuItem>)}
-          </Select>
-        </FormControl>
-
-        <Autocomplete
-          options={medicos.filter(m => m.name.toLowerCase().includes(medicoInput.toLowerCase()))}
-          getOptionLabel={(option) => option.name}
-          value={medicos.find(m => m.id === medicoId) || null}
-          inputValue={medicoInput}
-          onInputChange={(e, newInput) => setMedicoInput(newInput)}
-          onChange={(e, newValue) => setMedicoId(newValue ? newValue.id : "")}
-          renderInput={(params) => <TextField {...params} label="Médico Disponível" required />}
-        />
-
-        <Button type="submit" variant="contained" color={editando ? "success":"primary"}>
-          {editando ? "Salvar Alterações" : "Confirmar Agendamento"}
-        </Button>
-      </Box>
-
-      <Typography variant="h5" gutterBottom>Agendamentos</Typography>
-      {agendamentos.length === 0 ? (
-        <Typography>Nenhum agendamento registrado ainda.</Typography>
-      ) : (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>ID</TableCell>
-                <TableCell>Paciente</TableCell>
-                <TableCell>Telefone</TableCell>
-                <TableCell>Médico</TableCell>
-                <TableCell>Data</TableCell>
-                <TableCell>Hora</TableCell>
-                <TableCell>Sala</TableCell>
-                <TableCell>Ações</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {agendamentos.map(a => (
-                <TableRow key={a.id}>
-                  <TableCell>{a.id}</TableCell>
-                  <TableCell>{getUserNome(a.pacienteId, "paciente")}</TableCell>
-                  <TableCell>{a.telefone}</TableCell>
-                  <TableCell>{a.medico?.user?.name}</TableCell>
-                  <TableCell>{a.data}</TableCell>
-                  <TableCell>{a.hora}</TableCell>
-                  <TableCell>{a.sala}</TableCell>
-                  <TableCell>
-                    <Button variant="outlined" color="warning" size="small" onClick={() => handleEditar(a)} sx={{ mr: 1 }}>Editar</Button>
-                    <Button variant="outlined" color="error" size="small" onClick={() => handleCancelar(a.id)}>Cancelar</Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-    </Container>
+    <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: 1 }}>
+      <Table>
+        <TableHead>
+          <TableRow sx={{ backgroundColor: 'grey.200' }}>
+            <TableCell>ID</TableCell>
+            <TableCell>Paciente</TableCell>
+            <TableCell>Telefone</TableCell>
+            <TableCell>Médico</TableCell>
+            <TableCell>Data</TableCell>
+            <TableCell>Hora</TableCell>
+            <TableCell>Sala</TableCell>
+            <TableCell>Ações</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {agendamentos.map((a, i) => (
+            <TableRow
+              key={a.id}
+              sx={{
+                backgroundColor: i % 2 ? 'grey.50' : 'white',
+                "&:hover": { backgroundColor: 'action.hover' },
+              }}
+            >
+              <TableCell>{a.id}</TableCell>
+              <TableCell>{getUserNome(a.pacienteId, "paciente")}</TableCell>
+              <TableCell>{a.telefone}</TableCell>
+              <TableCell>{a.medico?.user?.name}</TableCell>
+              <TableCell>{a.data}</TableCell>
+              <TableCell>{a.hora}</TableCell>
+              <TableCell>{a.sala}</TableCell>
+              <TableCell sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  variant="outlined"
+                  color="warning"
+                  size="small"
+                  onClick={() => handleEditar(a)}
+                >
+                  Editar
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  onClick={() => handleCancelar(a.id)}
+                >
+                  Cancelar
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
   );
 }

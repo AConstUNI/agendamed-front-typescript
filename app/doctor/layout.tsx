@@ -3,7 +3,7 @@
 import AppBarLayout from "../.components/AppBarLayout";
 
 const menuItems = [
-  { text: "Home", href: "/doctor" },
+  { text: "Agendamentos", href: "/doctor" },
 ];
 
 export default function DoctorLayout({
